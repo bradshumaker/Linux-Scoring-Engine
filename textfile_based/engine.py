@@ -1,6 +1,11 @@
 #!/usr/bin/python2
 # Author is Moses Arocha
+# Contributions: Brad Shumaker
 
+#changes 11/2/17
+#added prompt() to both alert and write to file
+#removed all instances of f.open etc
+# score = score +1 changed to score += 1. it's good to be lazy.
 
 import os
 import pwd
@@ -15,28 +20,29 @@ import subprocess as n
 import pygame
 import time
 
-
-n.call(['notify-send', 'foo', 'bar'])
 pygame.init()
-pygame.mixer.music.load("/home/moses/Music/smb_stage_clear.mp3")
-pygame.mixer.music.play()
-time.sleep(10)
-
-
+pygame.mixer.music.load("/score/a.mp3")
 
 score = 0
 points = []
 
+def prompt(notifytxt):
+   n.call(['notify-send', 'Points Awarded', notifytxt])
+   pygame.mixer.music.play()
+   f = open('index.html','a')
+   f.write(notifytxt+'<br>')
+   f.close()
 
-def program_check(program):
+def program_remove(program):
+   global score
    pro = subprocess.Popen("dpkg -l | grep " +program, shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.stdout.close()
    pro.wait()
-   if display:
-       return True
-   else:
-       return False
+   if not display:
+      score += 1
+      prompt('Removed The Tool '+program)
+
 
 
 def waf_check():
@@ -48,9 +54,7 @@ def waf_check():
        pro.wait()
        if "SecRequestBodyAccess Off" in display:
            score = score+1
-           f = open('index.html', 'a')
-           f.write('Added WAF Protection to Apache Server')
-           f.close()
+           prompt('Added WAF Protection to APache Server')
 
 
 def update_programs(topic,respository):
@@ -61,9 +65,7 @@ def update_programs(topic,respository):
    pro.wait()
    if respository in display:
       score = score+1
-      f = open('index.html', 'a')
-      f.write('Respository Added To Debian Package Lists')
-      f.close()
+      prompt('Respository Added To Debian Package Lists')
 
 
 def user_passwd(user,hash):
@@ -74,9 +76,7 @@ def user_passwd(user,hash):
    pro.wait()
    if hash not in display:
       score = score+1
-      f = open('index.html', 'a')
-      f.write('Changed '+user+' Password')
-      f.close()
+      prompt('Changed '+user+' Password')
 
 
 def firewall_check():
@@ -87,10 +87,7 @@ def firewall_check():
    pro.wait()
    if 'Firewall/setup.py' not in display:
       score = score+1
-      points.append('Enabled The Firewall')
-      f = open('index.html', 'a')
-      f.write('Enabled The Firewall')
-      f.close()
+      prompt('Enabled The Firewall')
 
 
 def group_check(user):
@@ -100,9 +97,7 @@ def group_check(user):
    pro.wait()
    if user in display:
       score = score+1
-      f = open('index.html', 'a')
-      f.write('Added '+user+' To The Sudo Group')
-      f.close()
+      prompt('Added '+user+' To The Sudo Group')
 
 
 def password_complexity():
@@ -113,13 +108,13 @@ def password_complexity():
    f = open('index.html', 'a')
    if "remember=5" in display:
      score = score+1
-     f.write('Added Password History')
+     f.write('Added Password History<br>')
    if "minlen=8" in display:
      score = score+1
-     f.write('Enforced Password Length')
+     f.write('Enforced Password Length<br>')
    if "ucredit" and "lcredit" and "dcredit" and "ocredit" in display:
      score = score+1
-     f.write('Added Password Complexity')
+     f.write('Added Password Complexity<br>')
      f.close()
 
 
@@ -130,9 +125,7 @@ def password_history():
    pro.wait()
    if "PASS_MAX_DAYS " and "PASS_MIN_DAYS " and "PASS_WARN_AGE " in display:
      score = score+1
-     f = open('index.html', 'a')
-     f.write('Added Password History Standards')
-     f.close()
+     prompt('Added Password History Standards')
 
 
 def account_policy():
@@ -142,9 +135,7 @@ def account_policy():
    pro.wait()
    if "deny=" and "unlock_time=" in display:
       score = score+1
-      f = open('index.html', 'a')
-      f.write('Set Account Policy Standards')
-      f.close()
+      prompt('Set Account Policy Standards')
 
 
 def guest_account(file_path):
@@ -155,9 +146,7 @@ def guest_account(file_path):
      pro.wait()
      if "allow-guest=false" in display:
         score = score+1
-        f = open('index.html', 'a')
-        f.write('Disabled Guest Account')
-        f.close()
+        prompt('Disabled Guest Account')
 
 
 def apache_security(file):
@@ -168,9 +157,7 @@ def apache_security(file):
       pro.wait()
       if "ServerSignature" and "ServerTokens" in display:
           score = score+1
-          f = open('index.html', 'a')
-          f.write('Secured Apache Web Server')
-          f.close()
+          prompt('Secured Apache Web Server')
 
 
 def ssh_security():
@@ -181,13 +168,13 @@ def ssh_security():
    f = open('index.html', 'a')
    if "no" in display:
       score = score+1
-      f.write('Disabled Root Login for SSH')
+      f.write('Disabled Root Login for SSH<br>')
    subpro = subprocess.Popen("cat /etc/ssh/sshd_config", shell=True, stdout=subprocess.PIPE)
    subdisplay = subpro.stdout.read()
    subpro.wait()
    if "AllowUsers" in subdisplay:
       score = score+1
-      f.write('Secured SSH User Login')
+      f.write('Secured SSH User Login<br>')
       f.close()
 
 
@@ -196,11 +183,9 @@ def samba_security():
    pro = subprocess.Popen("cat /etc/samba/smb.conf", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.wait()
-   f = open('index.html', 'a')
    if "guest ok = no" in display:
       score = score+1
-      f.write('Secured Samba Server')
-      f.close()
+      prompt('Secured Samba Server')
 
 
 def php_security():
@@ -210,46 +195,32 @@ def php_security():
    pro.wait()
    if "Off" in display:
      score = score+1
-     f = open('index.html', 'a')
-     f.write('secured PHP Version')
-     f.close()
+     prompt('secured PHP Version')
 
 
 def malware_check(file_path):
    global score
    if not os.path.isfile(file_path):
       score = score+1
-      f = open('index.html', 'a')
-      f.write('Removed Harmful File')
-      f.close()
+      prompt('Removed Harmful File')
 
 
-def user_check(user):
+def user_check(baduser):
    global score
-   jenny = 0
-   for line in open('/etc/passwd'):
-       if user in line:
-           jenny = 1
-   if jenny == 0:
-       score = score+1
-       f = open('index.html','a')
-       f.write('Removed The User '+user)
-       f.close()
+   pro = subprocess.Popen("cat /etc/pam.d/common-auth", shell=True, stdout=subprocess.PIPE)
+   display = pro.stdout.read()
+   pro.wait()
+   if not baduser in baduser:
+      score += 1
+      prompt('Removed The User '+user)
 
 
 def main():
    global score
    global points
-   if not program_check('nmap'):
-      score = score+1
-      f = open('index.html','a')
-      f.write('Removed The Tool Nmap')
-      f.close()
-   if not program_check('medusa'):
-      score = score+1
-      d = open('index.html','a')
-      d.write('Removed The Tool Medusa')
-      d.close()
+
+   program_remove('nmap')
+   program_remove('medusa')
    user_check('jennylewis')
    user_check('moses')
    group_check('juan')
@@ -277,5 +248,4 @@ def main():
 
 if __name__ == '__main__':
    main()
-
 
