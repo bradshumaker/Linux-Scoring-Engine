@@ -6,32 +6,51 @@
 #added prompt() to both alert and write to file
 #removed all instances of f.open etc
 # score = score +1 changed to score += 1. it's good to be lazy.
-
+ 
 import os
 import pwd
 import re
 import socket
 import subprocess
 import sys
-
-#!/usr/bin/python2
-
 import subprocess as n
 import pygame
 import time
 
 pygame.init()
-pygame.mixer.music.load("/score/a.mp3")
+pygame.mixer.music.load("a.mp3")
 
 score = 0
-points = []
+#points = []
+
+def addScore(points): #me thinks this will be a useful function later
+   global score
+   score += points
 
 def prompt(notifytxt):
-   n.call(['notify-send', 'Points Awarded', notifytxt])
+   global score
+   addScore(1) #will need to increase variables I pass to func later.
+   n.call(['notify-send', 'Points Awarded!', notifytxt])
    pygame.mixer.music.play()
    f = open('index.html','a')
-   f.write(notifytxt+'<br>')
+   f.write('&bull;' +notifytxt+'<br>\n')
    f.close()
+
+def checkComplete(notifytxt): #Prevent Duplicate Prompts
+   #does index.html exist? Need more of these to prevent error messages.
+   #also, add a variable to change the index.html path /home/<username>/Desktop
+   if os.path.isfile("index.html"):
+       pro = subprocess.Popen("grep \"" +notifytxt+ "\" index.html", shell=True, stdout=subprocess.PIPE)
+       display = pro.stdout.read()
+       pro.stdout.close()
+       pro.wait()
+       if not display:
+         prompt(notifytxt)
+       else:
+         addScore(1) #without this the end console provides an invaled #/total completed
+   #if the file doesn't exist then they haven't completed. GIVE THEM CAKE!
+   else:
+      prompt(notifytxt)
 
 def program_remove(program):
    global score
@@ -40,9 +59,7 @@ def program_remove(program):
    pro.stdout.close()
    pro.wait()
    if not display:
-      score += 1
-      prompt('Removed The Tool '+program)
-
+      checkComplete('Program '+program+' removed')
 
 
 def waf_check():
@@ -53,8 +70,7 @@ def waf_check():
        pro.stdout.close()
        pro.wait()
        if "SecRequestBodyAccess Off" in display:
-           score = score+1
-           prompt('Added WAF Protection to APache Server')
+           checkComplete('Added WAF Protection to APache Server')
 
 
 def update_programs(topic,respository):
@@ -64,8 +80,7 @@ def update_programs(topic,respository):
    pro.stdout.close()
    pro.wait()
    if respository in display:
-      score = score+1
-      prompt('Respository Added To Debian Package Lists')
+      checkComplete('Respository '+topic+' Added To Debian Package Lists')
 
 
 def user_passwd(user,hash):
@@ -74,20 +89,20 @@ def user_passwd(user,hash):
    display = pro.stdout.read()
    pro.stdout.close()
    pro.wait()
-   if hash not in display:
-      score = score+1
-      prompt('Changed '+user+' Password')
+   if user in display: #no points for deleting valid users!
+      if hash not in display:
+         checkComplete('Changed '+user+' Password')
+   #else:
+      #remove points, coming soon...
 
-
-def firewall_check():
+def firewall_check(): #changed from crontab -e, was this a different check?
    global score
-   pro = subprocess.Popen("crontab -e", shell=True, stdout=subprocess.PIPE)
+   pro = subprocess.Popen("ufw status", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.stdout.close()
    pro.wait()
-   if 'Firewall/setup.py' not in display:
-      score = score+1
-      prompt('Enabled The Firewall')
+   if 'inactive' not in display:
+      checkComplete('Enabled The Firewall')
 
 
 def group_check(user):
@@ -96,8 +111,7 @@ def group_check(user):
    display = pro.stdout.read()
    pro.wait()
    if user in display:
-      score = score+1
-      prompt('Added '+user+' To The Sudo Group')
+      checkComplete('Added '+user+' To The Sudo Group')
 
 
 def password_complexity():
@@ -124,8 +138,7 @@ def password_history():
    display = pro.stdout.read()
    pro.wait()
    if "PASS_MAX_DAYS " and "PASS_MIN_DAYS " and "PASS_WARN_AGE " in display:
-     score = score+1
-     prompt('Added Password History Standards')
+     checkComplete('Added Password History Standards')
 
 
 def account_policy():
@@ -134,7 +147,6 @@ def account_policy():
    display = pro.stdout.read()
    pro.wait()
    if "deny=" and "unlock_time=" in display:
-      score = score+1
       prompt('Set Account Policy Standards')
 
 
@@ -145,8 +157,7 @@ def guest_account(file_path):
      display = pro.stdout.read()
      pro.wait()
      if "allow-guest=false" in display:
-        score = score+1
-        prompt('Disabled Guest Account')
+        checkComplete('Disabled Guest Account')
 
 
 def apache_security(file):
@@ -156,8 +167,7 @@ def apache_security(file):
       display = pro.stdout.read()
       pro.wait()
       if "ServerSignature" and "ServerTokens" in display:
-          score = score+1
-          prompt('Secured Apache Web Server')
+          checkComplete('Secured Apache Web Server')
 
 
 def ssh_security():
@@ -184,8 +194,7 @@ def samba_security():
    display = pro.stdout.read()
    pro.wait()
    if "guest ok = no" in display:
-      score = score+1
-      prompt('Secured Samba Server')
+      checkComplete('Secured Samba Server')
 
 
 def php_security():
@@ -194,15 +203,13 @@ def php_security():
    display = pro.stdout.read()
    pro.wait()
    if "Off" in display:
-     score = score+1
-     prompt('secured PHP Version')
+     checkComplete('secured PHP Version')
 
 
-def malware_check(file_path):
+def malware_check(name, file_path):
    global score
    if not os.path.isfile(file_path):
-      score = score+1
-      prompt('Removed Harmful File')
+      checkComplete('Removed Harmful File: '+name)
 
 
 def user_check(baduser):
@@ -211,8 +218,7 @@ def user_check(baduser):
    display = pro.stdout.read()
    pro.wait()
    if not baduser in baduser:
-      score += 1
-      prompt('Removed The User '+user)
+      checkComplete('Removed The User '+user)
 
 
 def main():
@@ -227,8 +233,8 @@ def main():
    user_passwd('cyber', '$6$FicC')
    user_passwd('jimmy', '$6$QMoj')
    user_passwd('ben',   '$6$SkT') 
-   malware_check('/home/cyber/.virus.py')
-   malware_check('/root/Firewall/setup.py')
+   malware_check('.virus.py', '/home/cyber/.virus.py')
+   malware_check('setup.py', '/root/Firewall/setup.py')
    firewall_check()
    update_programs('General','http://us.archive.ubuntu.com/ubuntu')
    update_programs('Security','http://security.ubuntu.com/ubuntu')
@@ -237,15 +243,15 @@ def main():
    account_policy()
    guest_account('/etc/lightdm/lightdm.conf')
    apache_security('/etc/apache2/conf-available/myconf.conf')
-   ssh_security()
-   php_security()
-   waf_check()
-   samba_security()
-   for point in points:
-       print point
+   #ssh_security()
+   #php_security()
+   #waf_check()
+   #samba_security()
+   #for point in points:
+   #    print point
    print str(score),"/25 Total Points"
 
 
 if __name__ == '__main__':
-   main()
+ main()
 
