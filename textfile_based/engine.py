@@ -77,7 +77,7 @@ def program_kernel(kVersion, kMajorRev, kMinRev):
    pro = subprocess.Popen("uname -r | cut -d- -f1")
    display = pro.stdout.read()
    pro.stdout.close()
-   if (display[0] >= kVersion) and (display[2] >= kMajorRev) and (display[4:] >= kMinRev)
+   if (display[0] >= kVersion) and (display[2] >= kMajorRev) and (display[4:] >= kMinRev):
       checkComplete('System Kernel Upgraded')
 
 
@@ -97,7 +97,7 @@ def user_hiddenroot():
    pro = subprocess.Popen("grep -v root /etc/passwd | grep :0:0:")
    display = pro.stdout.read()
    pro.wait()
-   if not display
+   if not display:
       checkComplete('Hidden Root User Removed')
 
 
@@ -181,7 +181,7 @@ def apache_security(file):
 
 
 def ssh_security():
-   if os.path.isfile('/etc/ssh/sshd_config')
+   if os.path.isfile('/etc/ssh/sshd_config'):
       pro = subprocess.Popen("cat /etc/ssh/sshd_config", shell=True, stdout=subprocess.PIPE)
       display = pro.stdout.read()
       pro.wait()
@@ -204,7 +204,7 @@ def samba_security():
 
 
 def php_security():
-   if os.path.isfile('/etc/php/7.0/apache2/php.ini') #make sure php7 is installed
+   if os.path.isfile('/etc/php/7.0/apache2/php.ini'): #make sure php7 is installed
       pro = subprocess.Popen("cat /etc/php/7.0/apache2/php.ini | grep expose_php", shell=True, stdout=subprocess.PIPE)
       display = pro.stdout.read()
       pro.wait()
@@ -231,8 +231,10 @@ def main():
 
    program_remove('nmap')
    program_remove('medusa')
+   program_kernel('3','2','1')
    user_remove('jennylewis')
    user_remove('moses')
+   user_hiddenroot()
    group_check('1','juan','sudo')
    user_passwd('cyber', '$6$FicC')
    user_passwd('jimmy', '$6$QMoj')
