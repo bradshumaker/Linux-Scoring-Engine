@@ -212,13 +212,13 @@ def malware_check(name, file_path):
       checkComplete('Removed Harmful File: '+name)
 
 
-def user_check(baduser):
+def user_check(badUser):
    global score
    pro = subprocess.Popen("cat /etc/pam.d/common-auth", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.wait()
-   if not baduser in baduser:
-      checkComplete('Removed The User '+user)
+   if not badUser in display:
+      checkComplete('Removed The User '+badUser)
 
 
 def main():
