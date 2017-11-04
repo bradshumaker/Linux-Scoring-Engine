@@ -2,10 +2,10 @@
 # Author is Moses Arocha
 # Contributions: Brad Shumaker
 
-#changes 11/2/17
 #added prompt() to both alert and write to file
 #removed all instances of f.open etc
 # score = score +1 changed to score += 1. it's good to be lazy.
+#shell=true makes the program vulnerable to 'shell injection'. kinda cool, right?
  
 import os
 import pwd
@@ -23,18 +23,20 @@ pygame.mixer.music.load("a.mp3")
 score = 0
 #points = []
 
-def addScore(points): #me thinks this will be a useful function later
+def modScore(points): #changed to modScore, passing -1 will decrease
    global score
    score += points
 
+
 def prompt(notifytxt):
    global score
-   addScore(1) #will need to increase variables I pass to func later.
+   modScore(1) #will need to increase variables I pass to func later.
    n.call(['notify-send', 'Points Awarded!', notifytxt])
    pygame.mixer.music.play()
    f = open('index.html','a')
    f.write('&bull;' +notifytxt+'<br>\n')
    f.close()
+
 
 def checkComplete(notifytxt): #Prevent Duplicate Prompts
    #does index.html exist? Need more of these to prevent error messages.
@@ -47,10 +49,11 @@ def checkComplete(notifytxt): #Prevent Duplicate Prompts
        if not display:
          prompt(notifytxt)
        else:
-         addScore(1) #without this the end console provides an invaled #/total completed
+         modScore(1) #without this the end console provides an invaled #/total completed
    #if the file doesn't exist then they haven't completed. GIVE THEM CAKE!
    else:
       prompt(notifytxt)
+
 
 def program_remove(program):
    pro = subprocess.Popen("dpkg -l | grep " +program, shell=True, stdout=subprocess.PIPE)
@@ -61,23 +64,21 @@ def program_remove(program):
       checkComplete('Program '+program+' removed')
 
 
-def waf_check():
-   if os.path.isfile("/etc/modsecurity/modsecurity.conf-recommended"):
-       pro = subprocess.Popen("cat /etc/modsecurity/modsecurity.conf-recommended", shell=True, stdout=subprocess.PIPE)
-       display = pro.stdout.read()
-       pro.stdout.close()
-       pro.wait()
-       if "SecRequestBodyAccess Off" in display:
-           checkComplete('Added WAF Protection to APache Server')
-
-
-def update_programs(topic,respository):
+def program_respos(topic,respository):
    pro = subprocess.Popen("cat /etc/apt/sources.list", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.stdout.close()
    pro.wait()
    if respository in display:
       checkComplete('Respository '+topic+' Added To Debian Package Lists')
+
+
+def program_kernel(kVersion, kMajorRev, kMinRev):
+   pro = subprocess.Popen("uname -r | cut -d- -f1")
+   display = pro.stdout.read()
+   pro.stdout.close()
+   if (display[0] >= kVersion) and (display[2] >= kMajorRev) and (display[4:] >= kMinRev)
+      checkComplete('System Kernel Upgraded')
 
 
 def user_passwd(user,hash):
@@ -91,6 +92,42 @@ def user_passwd(user,hash):
    #else:
       #remove points, coming soon...
 
+
+def user_hiddenroot():
+   pro = subprocess.Popen("grep -v root /etc/passwd | grep :0:0:")
+   display = pro.stdout.read()
+   pro.wait()
+   if not display
+      checkComplete('Hidden Root User Removed')
+
+
+def user_remove(badUser): #renamed _remove because it checks removal not existance. 
+   pro = subprocess.Popen("cat /etc/pam.d/common-auth", shell=True, stdout=subprocess.PIPE)
+   display = pro.stdout.read()
+   pro.wait()
+   if not badUser in display:
+      checkComplete('Removed The User '+badUser)
+
+
+def guest_account(file_path):
+   if os.path.isfile(file_path):
+     pro = subprocess.Popen("cat "+file_path, shell=True, stdout=subprocess.PIPE)
+     display = pro.stdout.read()
+     pro.wait()
+     if "allow-guest=false" in display:
+        checkComplete('Disabled Guest Account')
+
+
+def group_check(change,user,group): #change: 0 - Remove, 1 - add. Example: group_check(1, baduser, sudo)
+   pro = subprocess.Popen("cat /etc/group | grep \""+group+"\"", shell=True, stdout=subprocess.PIPE)
+   display = pro.stdout.read()
+   pro.wait()
+   if change and (user in display):
+      checkComplete('Added '+user+' To The '+group+' Group')
+   if not change and (user not in display):
+      checkComplete('Removed '+user+' From the '+group+' Group')
+
+
 def firewall_check(): #changed from crontab -e, was this a different check?
    pro = subprocess.Popen("ufw status", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
@@ -98,14 +135,6 @@ def firewall_check(): #changed from crontab -e, was this a different check?
    pro.wait()
    if 'inactive' not in display:
       checkComplete('Enabled The Firewall')
-
-
-def group_check(user):
-   pro = subprocess.Popen("cat /etc/group | grep sudo", shell=True, stdout=subprocess.PIPE)
-   display = pro.stdout.read()
-   pro.wait()
-   if user in display:
-      checkComplete('Added '+user+' To The Sudo Group')
 
 
 def password_complexity(): #break these into different settings or lump them into one...
@@ -136,13 +165,10 @@ def account_policy():
       checkComplete('Set Account Policy Standards')
 
 
-def guest_account(file_path):
-   if os.path.isfile(file_path):
-     pro = subprocess.Popen("cat "+file_path, shell=True, stdout=subprocess.PIPE)
-     display = pro.stdout.read()
-     pro.wait()
-     if "allow-guest=false" in display:
-        checkComplete('Disabled Guest Account')
+def malware_check(name, file_path):
+   if not os.path.isfile(file_path):
+      checkComplete('Removed Harmful File: '+name)
+
 
 #critical Services listed below
 def apache_security(file):
@@ -185,19 +211,18 @@ def php_security():
       if "Off" in display:
         checkComplete('secured PHP Version')
 
+
+def waf_check():
+   if os.path.isfile("/etc/modsecurity/modsecurity.conf-recommended"):
+       pro = subprocess.Popen("cat /etc/modsecurity/modsecurity.conf-recommended", shell=True, stdout=subprocess.PIPE)
+       display = pro.stdout.read()
+       pro.stdout.close()
+       pro.wait()
+       if "SecRequestBodyAccess Off" in display:
+           checkComplete('Added WAF Protection to APache Server')
+
+
 #End of critical services
-
-def malware_check(name, file_path):
-   if not os.path.isfile(file_path):
-      checkComplete('Removed Harmful File: '+name)
-
-
-def user_remove(badUser): #renamed _remove because it checks removal not existance. 
-   pro = subprocess.Popen("cat /etc/pam.d/common-auth", shell=True, stdout=subprocess.PIPE)
-   display = pro.stdout.read()
-   pro.wait()
-   if not badUser in display:
-      checkComplete('Removed The User '+badUser)
 
 
 def main():
@@ -208,15 +233,15 @@ def main():
    program_remove('medusa')
    user_remove('jennylewis')
    user_remove('moses')
-   group_check('juan')
+   group_check('1','juan','sudo')
    user_passwd('cyber', '$6$FicC')
    user_passwd('jimmy', '$6$QMoj')
    user_passwd('ben',   '$6$SkT') 
    malware_check('.virus.py', '/home/cyber/.virus.py')
    malware_check('setup.py', '/root/Firewall/setup.py')
    firewall_check()
-   update_programs('General','http://us.archive.ubuntu.com/ubuntu')
-   update_programs('Security','http://security.ubuntu.com/ubuntu')
+   programs_repos('General','http://us.archive.ubuntu.com/ubuntu')
+   programs_repos('Security','http://security.ubuntu.com/ubuntu')
    password_complexity()
    password_history()
    account_policy()
