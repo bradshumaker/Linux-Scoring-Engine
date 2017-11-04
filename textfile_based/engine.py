@@ -53,7 +53,6 @@ def checkComplete(notifytxt): #Prevent Duplicate Prompts
       prompt(notifytxt)
 
 def program_remove(program):
-   global score
    pro = subprocess.Popen("dpkg -l | grep " +program, shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.stdout.close()
@@ -63,7 +62,6 @@ def program_remove(program):
 
 
 def waf_check():
-   global score
    if os.path.isfile("/etc/modsecurity/modsecurity.conf-recommended"):
        pro = subprocess.Popen("cat /etc/modsecurity/modsecurity.conf-recommended", shell=True, stdout=subprocess.PIPE)
        display = pro.stdout.read()
@@ -74,7 +72,6 @@ def waf_check():
 
 
 def update_programs(topic,respository):
-   global score
    pro = subprocess.Popen("cat /etc/apt/sources.list", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.stdout.close()
@@ -84,7 +81,6 @@ def update_programs(topic,respository):
 
 
 def user_passwd(user,hash):
-   global score
    pro = subprocess.Popen("cat /etc/shadow | grep "+user, shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.stdout.close()
@@ -96,7 +92,6 @@ def user_passwd(user,hash):
       #remove points, coming soon...
 
 def firewall_check(): #changed from crontab -e, was this a different check?
-   global score
    pro = subprocess.Popen("ufw status", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.stdout.close()
@@ -106,7 +101,6 @@ def firewall_check(): #changed from crontab -e, was this a different check?
 
 
 def group_check(user):
-   global score
    pro = subprocess.Popen("cat /etc/group | grep sudo", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.wait()
@@ -114,26 +108,19 @@ def group_check(user):
       checkComplete('Added '+user+' To The Sudo Group')
 
 
-def password_complexity():
-   global score
+def password_complexity(): #break these into different settings or lump them into one...
    pro = subprocess.Popen("cat /etc/pam.d/common-password", shell=True, stdout=subprocess.PIPE)
    display=pro.stdout.read()
    pro.wait()
-   f = open('index.html', 'a')
    if "remember=5" in display:
-     score = score+1
-     f.write('Added Password History<br>')
+     checkComplete('Added Password History')
    if "minlen=8" in display:
-     score = score+1
-     f.write('Enforced Password Length<br>')
+     checkComplete('Enforced Password Length')
    if "ucredit" and "lcredit" and "dcredit" and "ocredit" in display:
-     score = score+1
-     f.write('Added Password Complexity<br>')
-     f.close()
+     checkComplete('Added Password Complexity')
 
 
 def password_history():
-   global score
    pro = subprocess.Popen("cat /etc/login.defs", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.wait()
@@ -142,16 +129,14 @@ def password_history():
 
 
 def account_policy():
-   global score
    pro = subprocess.Popen("cat /etc/pam.d/common-auth", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.wait()
    if "deny=" and "unlock_time=" in display:
-      prompt('Set Account Policy Standards')
+      checkComplete('Set Account Policy Standards')
 
 
 def guest_account(file_path):
-   global score
    if os.path.isfile(file_path):
      pro = subprocess.Popen("cat "+file_path, shell=True, stdout=subprocess.PIPE)
      display = pro.stdout.read()
@@ -159,9 +144,8 @@ def guest_account(file_path):
      if "allow-guest=false" in display:
         checkComplete('Disabled Guest Account')
 
-
+#critical Services listed below
 def apache_security(file):
-   global score
    if os.path.isfile(file):
       pro = subprocess.Popen("cat " +file, shell=True, stdout=subprocess.PIPE)
       display = pro.stdout.read()
@@ -171,49 +155,44 @@ def apache_security(file):
 
 
 def ssh_security():
-   global score
-   pro = subprocess.Popen("cat /etc/ssh/sshd_config | grep PermitRootLogin", shell=True, stdout=subprocess.PIPE)
-   display = pro.stdout.read()
-   pro.wait()
-   f = open('index.html', 'a')
-   if "no" in display:
-      score = score+1
-      f.write('Disabled Root Login for SSH<br>')
-   subpro = subprocess.Popen("cat /etc/ssh/sshd_config", shell=True, stdout=subprocess.PIPE)
-   subdisplay = subpro.stdout.read()
-   subpro.wait()
-   if "AllowUsers" in subdisplay:
-      score = score+1
-      f.write('Secured SSH User Login<br>')
-      f.close()
+   if os.path.isfile('/etc/ssh/sshd_config')
+      pro = subprocess.Popen("cat /etc/ssh/sshd_config", shell=True, stdout=subprocess.PIPE)
+      display = pro.stdout.read()
+      pro.wait()
+      if "PermitRootLogin no" in display:
+         checkComplete('Disabled Root Login for SSH')
+      #subpro = subprocess.Popen("cat /etc/ssh/sshd_config", shell=True, stdout=subprocess.PIPE)
+      #subdisplay = subpro.stdout.read()
+      #subpro.wait()
+      if "AllowUsers" in subdisplay:
+         checkComplete('Secured SSH User Login')
 
 
 def samba_security():
-   global score
-   pro = subprocess.Popen("cat /etc/samba/smb.conf", shell=True, stdout=subprocess.PIPE)
-   display = pro.stdout.read()
-   pro.wait()
-   if "guest ok = no" in display:
-      checkComplete('Secured Samba Server')
+   if os.path.isfile('/etc/samba/smb.conf'): #make sure samba is installed
+      pro = subprocess.Popen("cat /etc/samba/smb.conf", shell=True, stdout=subprocess.PIPE)
+      display = pro.stdout.read()
+      pro.wait()
+      if "guest ok = no" in display:
+         checkComplete('Samba Server Guest Disabled')
 
 
 def php_security():
-   global score
-   pro = subprocess.Popen("cat /etc/php/7.0/apache2/php.ini | grep expose_php", shell=True, stdout=subprocess.PIPE)
-   display = pro.stdout.read()
-   pro.wait()
-   if "Off" in display:
-     checkComplete('secured PHP Version')
+   if os.path.isfile('/etc/php/7.0/apache2/php.ini') #make sure php7 is installed
+      pro = subprocess.Popen("cat /etc/php/7.0/apache2/php.ini | grep expose_php", shell=True, stdout=subprocess.PIPE)
+      display = pro.stdout.read()
+      pro.wait()
+      if "Off" in display:
+        checkComplete('secured PHP Version')
 
+#End of critical services
 
 def malware_check(name, file_path):
-   global score
    if not os.path.isfile(file_path):
       checkComplete('Removed Harmful File: '+name)
 
 
-def user_check(badUser):
-   global score
+def user_remove(badUser): #renamed _remove because it checks removal not existance. 
    pro = subprocess.Popen("cat /etc/pam.d/common-auth", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.wait()
@@ -227,8 +206,8 @@ def main():
 
    program_remove('nmap')
    program_remove('medusa')
-   user_check('jennylewis')
-   user_check('moses')
+   user_remove('jennylewis')
+   user_remove('moses')
    group_check('juan')
    user_passwd('cyber', '$6$FicC')
    user_passwd('jimmy', '$6$QMoj')
@@ -247,7 +226,8 @@ def main():
    #php_security()
    #waf_check()
    #samba_security()
-   #for point in points:
+
+   #for point in points: #Write this to the html file and have inline updated
    #    print point
    print str(score),"/25 Total Points"
 
