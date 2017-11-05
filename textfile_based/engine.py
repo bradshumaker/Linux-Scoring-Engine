@@ -84,6 +84,10 @@ def program_respos(topic,respository):
    if respository in display:
       checkComplete('Respository '+topic+' Added To Debian Package Lists')
 
+def program_autoupdates():
+   if os.path.isfile("/etc/apt/apt.conf.d/20auto-upgrades"):
+      checkComplete('Automatic Updates Applied')
+
 
 def program_kernel(kVersion, kMajorRev, kMinRev): #Pass the minimum kernel version to get points
    pro = subprocess.Popen("uname -r | cut -d- -f1", shell=True, stdout=subprocess.PIPE)
@@ -131,13 +135,13 @@ def user_guest(file_path):
         checkComplete('Disabled Guest Account')
 
 
-def group_check(change,user,group): #change: 0 - Remove, 1 - add. Example: group_check(1, baduser, sudo)
+def group_check(change,user,group): #change: add or remove. Example: group_check('remove', 'baduser', 'sudo')
    pro = subprocess.Popen("cat /etc/group | grep \""+group+"\"", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.wait()
-   if change and (user in display):
+   if change == 'add' and (user in display):
       checkComplete('Added '+user+' To The '+group+' Group')
-   if not change and (user not in display):
+   if change =='remove' and (user not in display):
       checkComplete('Removed '+user+' From the '+group+' Group')
 
 
@@ -271,31 +275,32 @@ def main():
    global points
 
 
-   schedule_cron('cpstudent','ping')
-   firewall_rule('drop','80')
+   schedule_cron('cpstudent','ping') #user & search string
+   firewall_rule('drop','80') #action(drop|accept,port#)
    firewall_rule('accept','22')
-   console_userlist()
-   console_reboot()
+   console_userlist() #Don't display users @ login
+   console_reboot() #prevent Ctrl+Alt+del
+   program_autoupdates() #Check for unattended-upgrades
    program_remove('nmap')
    program_remove('medusa')
-   program_kernel('4','8','0')
-   user_remove('jennylewis')
-   user_remove('moses')
+   program_kernel('4','8','0') 	#Ubuntu16 ships with 4.4.0, btw.
+   user_remove('BadUser1')
+   user_remove('BadUser2')
    user_hiddenroot()
-   group_check('1','juan','sudo')
+   group_check('remove','User1','sudo') 	#add|remove user from group
+   group_check('add','cpstudent','adm')
    user_passwd('cyber', '$6$FicC')
    user_passwd('jimmy', '$6$QMoj')
    user_passwd('ben',   '$6$SkT') 
-   malware_check('.virus.py', '/home/cyber/.virus.py')
+   malware_check('.virus.py', '/home/cpstudent/.virus.py')
    malware_check('setup.py', '/root/Firewall/setup.py')
-   firewall_check()
-   program_respos('General','http://us.archive.ubuntu.com/ubuntu')
+   firewall_check() #is this thing on?
    program_respos('Security','http://security.ubuntu.com/ubuntu')
    password_complexity()
    password_history()
    account_policy()
    user_guest('/etc/lightdm/lightdm.conf')
-   apache_security('/etc/apache2/conf-available/myconf.conf')
+   #apache_security('/etc/apache2/conf-available/myconf.conf')
    #ssh_security()
    #php_security()
    #waf_check()
