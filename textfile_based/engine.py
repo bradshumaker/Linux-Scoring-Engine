@@ -2,7 +2,7 @@
 # Author is Moses Arocha
 # Contributions: Brad Shumaker
 
-#added prompt() to both alert and write to file
+#added win_prompt() to both alert and write to file
 #removed all instances of f.open etc
 # score = score +1 changed to score += 1. it's good to be lazy.
 #shell=true makes the program vulnerable to 'shell injection'. kinda cool, right?
@@ -17,8 +17,8 @@ import subprocess as n
 import pygame
 import time
 
-pygame.init()
-pygame.mixer.music.load("a.mp3")
+#pygame.init()
+#pygame.mixer.music.load("a.mp3")
 
 score = 0
 #points = []
@@ -28,10 +28,12 @@ def modScore(points): #changed to modScore, passing -1 will decrease
    score += points
 
 
-def prompt(notifytxt):
+def win_prompt(notifytxt):
    global score
    modScore(1) #will need to increase variables I pass to func later.
    n.call(['notify-send', 'Points Awarded!', notifytxt])
+   pygame.init()
+   pygame.mixer.music.load("a.mp3")
    pygame.mixer.music.play()
    f = open('index.html','a')
    f.write('&bull;' +notifytxt+'<br>\n')
@@ -47,12 +49,12 @@ def checkComplete(notifytxt): #Prevent Duplicate Prompts
        pro.stdout.close()
        pro.wait()
        if not display:
-         prompt(notifytxt)
+         win_prompt(notifytxt)
        else:
          modScore(1) #without this the end console provides an invaled #/total completed
    #if the file doesn't exist then they haven't completed. GIVE THEM CAKE!
    else:
-      prompt(notifytxt)
+      win_prompt(notifytxt)
 
 
 def program_remove(program):
@@ -73,12 +75,13 @@ def program_respos(topic,respository):
       checkComplete('Respository '+topic+' Added To Debian Package Lists')
 
 
-def program_kernel(kVersion, kMajorRev, kMinRev):
-   pro = subprocess.Popen("uname -r | cut -d- -f1")
+def program_kernel(kVersion, kMajorRev, kMinRev): #Pass the minimum kernel version to get points
+   pro = subprocess.Popen("uname -r | cut -d- -f1", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.stdout.close()
-   if (display[0] >= kVersion) and (display[2] >= kMajorRev) and (display[4:] >= kMinRev):
-      checkComplete('System Kernel Upgraded')
+   if (display[0] >= kVersion):
+      if (display[2] > kMajorRev) or (display[2] == kMajorRev and display[4:] > kMinRev): 
+         checkComplete('System Kernel Upgraded')
 
 
 def user_passwd(user,hash):
@@ -94,7 +97,7 @@ def user_passwd(user,hash):
 
 
 def user_hiddenroot():
-   pro = subprocess.Popen("grep -v root /etc/passwd | grep :0:0:")
+   pro = subprocess.Popen("cat /etc/passwd | grep -v root | grep :0:0:", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.wait()
    if not display:
@@ -231,7 +234,7 @@ def main():
 
    program_remove('nmap')
    program_remove('medusa')
-   program_kernel('3','2','1')
+   program_kernel('4','4','0')
    user_remove('jennylewis')
    user_remove('moses')
    user_hiddenroot()
@@ -242,8 +245,8 @@ def main():
    malware_check('.virus.py', '/home/cyber/.virus.py')
    malware_check('setup.py', '/root/Firewall/setup.py')
    firewall_check()
-   programs_repos('General','http://us.archive.ubuntu.com/ubuntu')
-   programs_repos('Security','http://security.ubuntu.com/ubuntu')
+   program_respos('General','http://us.archive.ubuntu.com/ubuntu')
+   program_respos('Security','http://security.ubuntu.com/ubuntu')
    password_complexity()
    password_history()
    account_policy()
