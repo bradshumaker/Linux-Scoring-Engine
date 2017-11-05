@@ -141,6 +141,26 @@ def firewall_check(): #changed from crontab -e, was this a different check?
       checkComplete('Enabled The Firewall')
 
 
+def console_reboot(): #Per Debian Security Guide. Go ahead...read it.
+   if os.path.isfile("/etc/init/control-alt-delete.conf"):
+      pro = subprocess.Popen("cat /etc/init/control-alt-delete.conf | grep shutdown | grep -v ^#", shell=True, stdout=subprocess.PIPE)
+      display = pro.stdout.read()
+      pro.wait()
+      if not display:
+         checkComplete('Prevented Ctrl+Alt+Del Reboot')
+   else: #they deleted the file, give points
+      checkComplete('Prevented Ctrl+Alt+Del Reboot')
+
+
+def console_userlist():
+   if os.path.isfile("/etc/lightdm/lightdm.conf"):
+      pro = subprocess.Popen("cat /etc/lightdm/lightdm.conf", shell=True, stdout=subprocess.PIPE)
+      display=pro.stdout.read()
+      pro.wait()
+      if 'greeter-hide-users = true' in display and 'greeter-show-manual-login = true' in display:
+         checkComplete('User List Hidden At Login')
+
+
 def password_complexity(): #break these into different settings or lump them into one...
    pro = subprocess.Popen("cat /etc/pam.d/common-password", shell=True, stdout=subprocess.PIPE)
    display=pro.stdout.read()
@@ -233,6 +253,8 @@ def main():
    global score
    global points
 
+   console_userlist()
+   console_reboot()
    program_remove('nmap')
    program_remove('medusa')
    program_kernel('4','8','0')
