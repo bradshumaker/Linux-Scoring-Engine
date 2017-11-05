@@ -19,7 +19,7 @@ import time
 
 #pygame.init()
 #pygame.mixer.music.load("a.mp3")
-
+reportLocation = './'
 score = 0
 #points = []
 
@@ -30,21 +30,22 @@ def modScore(points): #changed to modScore, passing -1 will decrease
 
 def win_prompt(notifytxt):
    global score
+   global reportLocation
    modScore(1) #will need to increase variables I pass to func later.
    n.call(['notify-send', 'Points Awarded!', notifytxt])
    pygame.init()
    pygame.mixer.music.load("a.mp3")
    pygame.mixer.music.play()
-   f = open('index.html','a')
+   f = open(reportLocation+'Score_Report.html','a')
    f.write('&bull;' +notifytxt+'<br>\n')
    f.close()
 
 
 def checkComplete(notifytxt): #Prevent Duplicate Prompts
-   #does index.html exist? Need more of these to prevent error messages.
-   #also, add a variable to change the index.html path /home/<username>/Desktop
-   if os.path.isfile("index.html"):
-       pro = subprocess.Popen("grep \"" +notifytxt+ "\" index.html", shell=True, stdout=subprocess.PIPE)
+   global reportLocation
+   #does the .html exist? Need more of these to prevent error messages.
+   if os.path.isfile(reportLocation+"Score_Report.html"):
+       pro = subprocess.Popen("grep \"" +notifytxt+ "\" "+reportLocation+"Score_Report.html", shell=True, stdout=subprocess.PIPE)
        display = pro.stdout.read()
        pro.stdout.close()
        pro.wait()
@@ -234,7 +235,7 @@ def main():
 
    program_remove('nmap')
    program_remove('medusa')
-   program_kernel('4','4','0')
+   program_kernel('4','8','0')
    user_remove('jennylewis')
    user_remove('moses')
    user_hiddenroot()
