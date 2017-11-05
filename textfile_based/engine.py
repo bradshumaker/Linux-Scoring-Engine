@@ -55,6 +55,7 @@ def checkComplete(notifytxt): #Prevent Duplicate Prompts
          modScore(1) #without this the end console provides an invaled #/total completed
    #if the file doesn't exist then they haven't completed. GIVE THEM CAKE!
    else:
+      f = open(reportLocation+'Score_Report.html', 'w+')
       win_prompt(notifytxt)
 
 
@@ -113,7 +114,7 @@ def user_remove(badUser): #renamed _remove because it checks removal not existan
       checkComplete('Removed The User '+badUser)
 
 
-def guest_account(file_path):
+def user_guest(file_path):
    if os.path.isfile(file_path):
      pro = subprocess.Popen("cat "+file_path, shell=True, stdout=subprocess.PIPE)
      display = pro.stdout.read()
@@ -140,6 +141,14 @@ def firewall_check(): #changed from crontab -e, was this a different check?
    if 'inactive' not in display:
       checkComplete('Enabled The Firewall')
 
+#hey this is works on multiple versions of linux ;-)
+def firewall_rule(status,port): #Status is: ACCEPT or DROP
+   pro = subprocess.Popen("iptables -L -n | grep  \":"+port+"$\" | grep "+status.upper(), shell=True, stdout=subprocess.PIPE)
+   display = pro.stdout.read() #search for port with nothing after it. IE: 22 not 2200 will trigger points
+   pro.stdout.close()
+   pro.wait()
+   if display:
+      checkComplete('Firewall Rule '+status+'ing port '+port)
 
 def console_reboot(): #Per Debian Security Guide. Go ahead...read it.
    if os.path.isfile("/etc/init/control-alt-delete.conf"):
@@ -147,9 +156,9 @@ def console_reboot(): #Per Debian Security Guide. Go ahead...read it.
       display = pro.stdout.read()
       pro.wait()
       if not display:
-         checkComplete('Prevented Ctrl+Alt+Del Reboot')
+         completeCheck('Prevented Ctrl+Alt+Del Reboot')
    else: #they deleted the file, give points
-      checkComplete('Prevented Ctrl+Alt+Del Reboot')
+      completeCheck('Prevented Ctrl+Alt+Del Reboot')
 
 
 def console_userlist():
@@ -253,6 +262,8 @@ def main():
    global score
    global points
 
+   firewall_rule('drop','80')
+   firewall_rule('accept','22')
    console_userlist()
    console_reboot()
    program_remove('nmap')
@@ -273,7 +284,7 @@ def main():
    password_complexity()
    password_history()
    account_policy()
-   guest_account('/etc/lightdm/lightdm.conf')
+   user_guest('/etc/lightdm/lightdm.conf')
    apache_security('/etc/apache2/conf-available/myconf.conf')
    #ssh_security()
    #php_security()
