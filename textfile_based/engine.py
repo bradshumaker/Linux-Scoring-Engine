@@ -59,6 +59,14 @@ def checkComplete(notifytxt): #Prevent Duplicate Prompts
       win_prompt(notifytxt)
 
 
+def schedule_cron(user, taskstring):
+   pro = subprocess.Popen("crontab -l -u"+user+" | grep \""+taskstring+"\"", shell=True, stdout=subprocess.PIPE)
+   display = pro.stdout.read()
+   pro.stdout.close()
+   if not display:
+      checkComplete("Removed Scheduled Task "+taskstring.capitalize())
+
+
 def program_remove(program):
    pro = subprocess.Popen("dpkg -l | grep " +program, shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
@@ -262,6 +270,8 @@ def main():
    global score
    global points
 
+
+   schedule_cron('cpstudent','ping')
    firewall_rule('drop','80')
    firewall_rule('accept','22')
    console_userlist()
