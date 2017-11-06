@@ -1,39 +1,22 @@
 # Linux Scoring Engine
 
 This scoring engine has a modular aspect to it, in the sense that it can, through a few edits, can be applied
-to almost any Linux image, even none Debian based distributions.
+to almost any Linux image, on Debian based distributions.
 
+My recommendation for setting up the engine:
 
-At the moment, their are two versions, the terminal based and the web interface version, which interacts
-with HTML files in order to display both the score and points earned.
-
-This project is still under production and is not expected for completion until late July of 2017.
-
-My recommendation for setting up web based interface engine:
-
-1. Have the "bad image" already created, for simplicity sake. (Recommend having Apache2 installed)
+1. Have the "bad image" already created, for simplicity sake.
 
 2. Copy the engine.py file to the root directory, remove all read and write permissions.
 
-3. Create a symbolic link to the file in another directory, preferably /var/www/html
+3. From here, edit the root user's crontab (# crontab -e) and place the line:
 
-4. From here, edit the root user's crontab (# crontab -e) and place the line:
+                * *  * * * python2 /directory/of/symboliclink
 
-                * *  * * * python /directory/of/symboliclink
-
-5. Finally wait a few minutes than check 127.0.0.1 and make sure the points are displaying.
+4. Check the folder containing engine.py for Error_log.txt and review the Scoring_Report.html location you configured in the engine.
 
 
 My recommendation for setting up terminal based engine:
-
-1. Have the "bad image" already created
-
-2. copy the engine.py file to somewhere accessible by the recipient
-
-3. run the script to check the score:
-
-           $ sudo python /directory/list/here/engine.py
-
 
 
 # Acknowledgements
