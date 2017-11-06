@@ -36,7 +36,7 @@ def win_prompt(notifytxt):
    global reportLocation
    global pygameNo
    modScore(1) #will need to increase variables I pass to func later.
-   if not pygameNo: 
+   if (pygameNo == 0): 
       pygame.mixer.music.load("a.mp3")
       pygame.mixer.music.play()
       n.call(['notify-send', 'Points Awarded!', notifytxt])
