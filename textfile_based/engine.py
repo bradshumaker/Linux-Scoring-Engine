@@ -15,7 +15,10 @@ import subprocess as n
 import pygame
 import time
 
-pygame.init()
+try:
+   pygame.init()
+except pygameError:
+   pygameNo = 1
 
 reportLocation = './'
 score = 0
@@ -31,9 +34,11 @@ def win_prompt(notifytxt):
    global reportLocation
    
    modScore(1) #will need to increase variables I pass to func later.
-   pygame.mixer.music.load("a.mp3")
-   pygame.mixer.music.play()
-   n.call(['notify-send', 'Points Awarded!', notifytxt])
+   if not pygameNo: 
+      pygame.mixer.music.load("a.mp3")
+      pygame.mixer.music.play()
+      n.call(['notify-send', 'Points Awarded!', notifytxt])
+
    f = open(reportLocation+'Score_Report.html','a')
    f.write('&bull;' +notifytxt+'<br>\n')
    f.close()
