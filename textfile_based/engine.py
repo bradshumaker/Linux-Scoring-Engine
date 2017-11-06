@@ -2,9 +2,7 @@
 # Author is Moses Arocha
 # Contributions: Brad Shumaker
 
-#added win_prompt() to both alert and write to file
-#removed all instances of f.open etc
-# score = score +1 changed to score += 1. it's good to be lazy.
+
 #shell=true makes the program vulnerable to 'shell injection'. kinda cool, right?
  
 import os
@@ -17,8 +15,8 @@ import subprocess as n
 import pygame
 import time
 
-#pygame.init()
-#pygame.mixer.music.load("a.mp3")
+pygame.init()
+
 reportLocation = './'
 score = 0
 #points = []
@@ -31,11 +29,11 @@ def modScore(points): #changed to modScore, passing -1 will decrease
 def win_prompt(notifytxt):
    global score
    global reportLocation
+   
    modScore(1) #will need to increase variables I pass to func later.
-   n.call(['notify-send', 'Points Awarded!', notifytxt])
-   pygame.init()
    pygame.mixer.music.load("a.mp3")
    pygame.mixer.music.play()
+   n.call(['notify-send', 'Points Awarded!', notifytxt])
    f = open(reportLocation+'Score_Report.html','a')
    f.write('&bull;' +notifytxt+'<br>\n')
    f.close()
@@ -292,7 +290,7 @@ def main():
    user_passwd('cyber', '$6$FicC')
    user_passwd('jimmy', '$6$QMoj')
    user_passwd('ben',   '$6$SkT') 
-   malware_check('.virus.py', '/home/cpstudent/.virus.py')
+   malware_check('.virus.py', '/home/notauser/.virus.py')
    malware_check('setup.py', '/root/Firewall/setup.py')
    firewall_check() #is this thing on?
    program_respos('Security','http://security.ubuntu.com/ubuntu')
