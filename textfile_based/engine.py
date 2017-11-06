@@ -32,7 +32,7 @@ def modScore(points): #changed to modScore, passing -1 will decrease
 def win_prompt(notifytxt):
    global score
    global reportLocation
-   
+   global pygameNo
    modScore(1) #will need to increase variables I pass to func later.
    if not pygameNo: 
       pygame.mixer.music.load("a.mp3")
