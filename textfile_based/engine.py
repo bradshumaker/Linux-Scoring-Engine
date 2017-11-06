@@ -15,6 +15,8 @@ import subprocess as n
 import pygame
 import time
 
+pygameNo = 0
+
 try:
    pygame.init()
 except pygameError:
