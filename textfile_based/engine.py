@@ -15,16 +15,23 @@ import subprocess as n
 import pygame
 import time
 
-pygameNo = 0
-
-try:
-   pygame.init()
-except pygameError:
-   pygameNo = 1
+pygame.init()
 
 reportLocation = './'
 score = 0
 #points = []
+
+
+def errorWrite(msg):
+   if os.path.isfile("Error_log.txt"):
+      f = open("Error_log.txt", 'a')
+      f.write(msg+'\n')
+      f.close()
+   else:
+      f = open(reportLocation+'Error_log.txt', 'w+')
+      f.write(msg+'\n')
+      f.close()
+
 
 def modScore(points): #changed to modScore, passing -1 will decrease
    global score
@@ -34,13 +41,10 @@ def modScore(points): #changed to modScore, passing -1 will decrease
 def win_prompt(notifytxt):
    global score
    global reportLocation
-   global pygameNo
    modScore(1) #will need to increase variables I pass to func later.
-   if (pygameNo == 0): 
-      pygame.mixer.music.load("a.mp3")
-      pygame.mixer.music.play()
-      n.call(['notify-send', 'Points Awarded!', notifytxt])
-
+   pygame.mixer.music.load("a.mp3")
+   pygame.mixer.music.play()
+   n.call(['notify-send', 'Points Awarded!', notifytxt])
    f = open(reportLocation+'Score_Report.html','a')
    f.write('&bull;' +notifytxt+'<br>\n')
    f.close()
@@ -65,11 +69,15 @@ def checkComplete(notifytxt): #Prevent Duplicate Prompts
 
 
 def schedule_cron(user, taskstring):
-   pro = subprocess.Popen("crontab -l -u"+user+" | grep \""+taskstring+"\"", shell=True, stdout=subprocess.PIPE)
-   display = pro.stdout.read()
-   pro.stdout.close()
-   if not display:
-      checkComplete("Removed Scheduled Task "+taskstring.capitalize())
+   if os.path.isfile("/var/spool/cron/crontabs/"+user): #does the user have a cronjob?
+      pro = subprocess.Popen("crontab -l -u"+user+" | grep \""+taskstring+"\"", shell=True, stdout=subprocess.PIPE)
+      display = pro.stdout.read()
+      pro.stdout.close()
+      if not display:
+         checkComplete("Removed Scheduled Task "+taskstring.capitalize())
+   else:
+      errorWrite('Error: '+user+' does not have a cron task. no points will be awarded')
+
 
 
 def program_remove(program):
@@ -138,6 +146,8 @@ def user_guest(file_path):
      pro.wait()
      if "allow-guest=false" in display:
         checkComplete('Disabled Guest Account')
+   else:
+      errorWrite('Error:No guest file located at:'+file_path)
 
 
 def group_check(change,user,group): #change: add or remove. Example: group_check('remove', 'baduser', 'sudo')
@@ -185,6 +195,8 @@ def console_userlist():
       pro.wait()
       if 'greeter-hide-users = true' in display and 'greeter-show-manual-login = true' in display:
          checkComplete('User List Hidden At Login')
+   else:
+      errorWrite('Error: No file lightdm.conf file found')
 
 
 def password_complexity(): #break these into different settings or lump them into one...
@@ -280,7 +292,7 @@ def main():
    global points
 
 
-   schedule_cron('cpstudent','ping') #user & search string
+   schedule_cron('bobZaggit','ping') #user & search string
    firewall_rule('drop','80') #action(drop|accept,port#)
    firewall_rule('accept','22')
    console_userlist() #Don't display users @ login
