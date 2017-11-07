@@ -178,27 +178,20 @@ def firewall_rule(status,port): #Status is: ACCEPT or DROP
    pro.wait()
    if display:
       checkComplete('Firewall Rule '+status+'ing port '+port)
-
+###
 def console_reboot(): #Per Debian Security Guide. Go ahead...read it.
    if os.path.isfile("/etc/init/control-alt-delete.conf"):
-      pro = subprocess.Popen("cat /etc/init/control-alt-delete.conf | grep shutdown | grep -v ^#", shell=True, stdout=subprocess.PIPE)
-      display = pro.stdout.read()
-      pro.wait()
-      #display.startswith('#')
-      #for line in display.split('\n')
-         #if 'shutdown' in line and line.startswith('#')
-            #completeCheck('')
-      if not display:
-         completeCheck('Prevented Ctrl+Alt+Del Reboot')
+      display = readFile("/etc/init/control-alt-delete.conf")
+      for line in display.split('\n'):
+         if 'shutdown' in line and line.startswith('#'):
+            checkComplete('Prevented Ctrl+Alt+Del Reboot')
    else: #they deleted the file, give points
       completeCheck('Prevented Ctrl+Alt+Del Reboot')
 
-
+###
 def console_userlist():
    if os.path.isfile("/etc/lightdm/lightdm.conf"):
-      pro = subprocess.Popen("cat /etc/lightdm/lightdm.conf", shell=True, stdout=subprocess.PIPE)
-      display=pro.stdout.read()
-      pro.wait()
+      display = readFile("cat /etc/lightdm/lightdm.conf")
       if 'greeter-hide-users = true' in display and 'greeter-show-manual-login = true' in display:
          checkComplete('User List Hidden At Login')
 
@@ -214,19 +207,15 @@ def password_complexity(): #break these into different settings or lump them int
    if "ucredit" and "lcredit" and "dcredit" and "ocredit" in display:
      checkComplete('Added Password Complexity')
 
-
+###
 def password_history():
-   pro = subprocess.Popen("cat /etc/login.defs", shell=True, stdout=subprocess.PIPE)
-   display = pro.stdout.read()
-   pro.wait()
+   display = readFile("/etc/login.defs")
    if "PASS_MAX_DAYS " and "PASS_MIN_DAYS " and "PASS_WARN_AGE " in display:
      checkComplete('Added Password History Standards')
 
-
+###
 def account_policy():
-   pro = subprocess.Popen("cat /etc/pam.d/common-auth", shell=True, stdout=subprocess.PIPE)
-   display = pro.stdout.read()
-   pro.wait()
+   display = readFile("/etc/pam.d/common-auth")
    if "deny=" and "unlock_time=" in display:
       checkComplete('Set Account Policy Standards')
 
