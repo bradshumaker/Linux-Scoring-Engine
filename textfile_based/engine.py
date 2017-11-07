@@ -5,6 +5,7 @@
 #shell=true makes the program vulnerable to 'shell injection'. kinda cool, right?
 
 import os
+import platform
 import pwd
 import re
 import socket
@@ -12,7 +13,7 @@ import subprocess
 import sys
 import subprocess as n
 import pygame
-import time
+import datetime
 
 pygame.init()
 
@@ -23,22 +24,21 @@ score = 0
 
 def readFile(file):
    if os.path.isfile(file):
-      pro = subprocess.Popen("cat "+file, shell=True, stdout=subprocess.PIPE)
-      display = pro.stdout.read()
-      pro.stdout.close()
-      pro.wait()
-      return display
+      with open (file,"r") as fileload:
+         inspectData = fileload.read()
+      return inspectData
    else:
       errorWrite('File not found: '+file)
 
 def errorWrite(msg):
+   timeStamp = datetime.datetime.now()
    if os.path.isfile("Error_log.txt"):
       f = open("Error_log.txt", 'a')
-      f.write(msg+'\n')
+      f.write(str(timeStamp)+','+msg+'\n')
       f.close()
    else:
       f = open(reportLocation+'Error_log.txt', 'w+')
-      f.write(msg+'\n')
+      f.write(str(timeStamp)+','+msg+'\n')
       f.close()
 
 
@@ -48,7 +48,6 @@ def modScore(points): #changed to modScore, passing -1 will decrease
 
 
 def win_prompt(notifytxt):
-   global score
    global reportLocation
    modScore(1) #will need to increase variables I pass to func later.
    pygame.mixer.music.load("a.mp3")
@@ -110,6 +109,7 @@ def program_autoupdates():
 
 ###?
 def program_kernel(kVersion, kMajorRev, kMinRev): #Pass the minimum kernel version to get points
+   #print platform.uname()
    pro = subprocess.Popen("uname -r", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.stdout.close()
