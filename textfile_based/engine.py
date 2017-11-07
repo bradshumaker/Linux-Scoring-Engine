@@ -228,32 +228,23 @@ def malware_check(name, file_path):
 #critical Services listed below
 def apache_security(file):
    if os.path.isfile(file):
-      pro = subprocess.Popen("cat " +file, shell=True, stdout=subprocess.PIPE)
-      display = pro.stdout.read()
-      pro.wait()
+      display = readFile(file)
       if "ServerSignature" and "ServerTokens" in display:
           checkComplete('Secured Apache Web Server')
 
 
 def ssh_security():
    if os.path.isfile('/etc/ssh/sshd_config'):
-      pro = subprocess.Popen("cat /etc/ssh/sshd_config", shell=True, stdout=subprocess.PIPE)
-      display = pro.stdout.read()
-      pro.wait()
+      display = readFile("/etc/ssh/sshd_config")
       if "PermitRootLogin no" in display:
          checkComplete('Disabled Root Login for SSH')
-      #subpro = subprocess.Popen("cat /etc/ssh/sshd_config", shell=True, stdout=subprocess.PIPE)
-      #subdisplay = subpro.stdout.read()
-      #subpro.wait()
-      if "AllowUsers" in subdisplay:
-         checkComplete('Secured SSH User Login')
+      if "AllowUsers" in display:
+        checkComplete('Secured SSH User Login')
 
 
 def samba_security():
    if os.path.isfile('/etc/samba/smb.conf'): #make sure samba is installed
-      pro = subprocess.Popen("cat /etc/samba/smb.conf", shell=True, stdout=subprocess.PIPE)
-      display = pro.stdout.read()
-      pro.wait()
+      display = readFile("/etc/samba/smb.conf")
       if "guest ok = no" in display:
          checkComplete('Samba Server Guest Disabled')
 
@@ -269,10 +260,7 @@ def php_security():
 
 def waf_check():
    if os.path.isfile("/etc/modsecurity/modsecurity.conf-recommended"):
-       pro = subprocess.Popen("cat /etc/modsecurity/modsecurity.conf-recommended", shell=True, stdout=subprocess.PIPE)
-       display = pro.stdout.read()
-       pro.stdout.close()
-       pro.wait()
+       display = readFile("/etc/modsecurity/modsecurity.conf-recommended")
        if "SecRequestBodyAccess Off" in display:
            checkComplete('Added WAF Protection to APache Server')
 
