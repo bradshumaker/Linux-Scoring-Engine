@@ -14,6 +14,7 @@ import sys
 import subprocess as n
 import pygame
 import datetime
+import ConfigParser
 
 pygame.init()
 
@@ -79,7 +80,7 @@ def checkComplete(notifytxt): #Prevent Duplicate Prompts
 
 def schedule_cron(user, taskstring): #fix
    if os.path.isfile("/var/spool/cron/crontabs/"+user): #does the user have a cronjob?
-      pro = subprocess.Popen("crontab -l -u"+user+" | grep \""+taskstring+"\"", shell=True, stdout=subprocess.PIPE)
+      pro = subprocess.Popen("crontab -l -u"+user+" | grep \""+taskstring+"\" | grep -v ^#", shell=True, stdout=subprocess.PIPE)
       display = pro.stdout.read()
       pro.stdout.close()
       if not display:
@@ -115,8 +116,8 @@ def program_kernel(kVersion, kMajorRev, kMinRev): #Pass the minimum kernel versi
    pro.stdout.close()
    display = display.split('.') #[0] = 4, [1]=4 [2]=0-genimg
    sysMinRev = display[2].split('-') #sysMinRev=0, cleans above last item
-   if (display[0] >= kVersion):
-      if (display[1] > kMajorRev) or (display[1] == kMajorRev and sysMinRev[0] > kMinRev):
+   if (int(display[0]) >= int(kVersion)):
+      if (int(display[1]) > int(kMajorRev)) or (int(display[1]) == int(kMajorRev) and int(sysMinRev[0]) > int(kMinRev)):
          checkComplete('System Kernel Upgraded')
 
 ###
@@ -272,32 +273,93 @@ def main():
    global score
    global points
 
+   config = ConfigParser.ConfigParser(allow_no_value=True)
+   config.read('engine.conf')
 
-   schedule_cron('bobZaggit','ping') #user & search string
-   firewall_rule('drop','80') #action(drop|accept,port#)
-   firewall_rule('accept','22')
-   console_userlist() #Don't display users @ login
-   console_reboot() #prevent Ctrl+Alt+del
-   program_autoupdates() #Check for unattended-upgrades
-   program_remove('nmap')
-   program_remove('medusa')
-   program_kernel('4','8','0') 	#Ubuntu16 ships with 4.4.0, btw.
-   user_check('remove','baduser1')
-   user_check('add','cpstudent')
-   user_hiddenroot()
-   group_check('remove','User1','sudo') 	#add|remove user from group
-   group_check('add','cpstudent','adm')
-   user_passwd('cyber', '$6$FicC')
-   user_passwd('jimmy', '$6$QMoj')
-   user_passwd('ben',   '$6$SkT')
-   malware_check('.virus.py', '/home/notauser/.virus.py')
-   malware_check('setup.py', '/root/Firewall/setup.py')
-   firewall_check() #is this thing on?
-   program_respos('Security','http://security.ubuntu.com/ubuntu')
-   password_complexity()
-   password_history()
-   account_policy()
-   user_guest()
+#find the remove options in engine.conf
+   if config.options('PROGRAM'):
+       if 'remove' in config.options('PROGRAM'):
+          for prog in config.get('PROGRAM','REMOVE').split(','):
+             program_remove(prog)
+         #addone to total
+       if 'kernel' in config.options('PROGRAM'):
+           KernelVer = config.get('PROGRAM','KERNEL').split('.')
+           program_kernel(KernelVer[0],KernelVer[1],KernelVer[2]) 	#Ubuntu16 ships with 4.4.0, btw.
+           #addone to total
+       if 'autoupdates' in config.options('PROGRAM'):
+          program_autoupdates()
+          #addone to total
+       if 'respos' in config.options('PROGRAM'): ##FIXME loophere
+           resposdata = config.get('PROGRAM','RESPOS').split(',')
+           program_respos(resposdata[0],resposdata[1])
+
+   if config.options('CRONTASK'):
+      for user in config.options('CRONTASK'):
+         schedule_cron(user,config.get('CRONTASK',user))
+      #addone to Total
+
+   if config.options('FIREWALL'):
+      for fwchk in config.options('FIREWALL'):
+         if 'firewallstatus' in fwchk:
+            firewall_check()
+            #addone to total
+         if 'acceptrule' in fwchk:
+            for port in config.get('FIREWALL','ACCEPTRULE').split(','):
+               firewall_rule('accept',port)
+              #addone to total
+         if 'droprule' in fwchk:
+            for port in config.get('FIREWALL','DROPRULE').split(','):
+               firewall_rule('drop',port)
+             #addone to total
+
+   if config.options('CONSOLE'):
+       if 'disablectrlaltdel' in config.options('CONSOLE'):
+          console_reboot()
+       if 'hideuserslogin' in config.options('CONSOLE'):
+          console_userlist
+
+   if config.options('GROUPS'):
+      for group in config.options('GROUPS'):
+          if 'groupadd' in group:
+              setting = config.get('GROUPS',group).split(',')
+              group_check('add',setting[0],setting[1])
+          if 'groupremove' in group:
+              setting = config.get('GROUPS',group).split(',')
+              group_check('remove',setting[0],setting[1])
+
+   if config.options('USERSETTINGS'):
+       for option in config.options('USERSETTINGS'):
+           if 'hiddenroot' in config.options('USERSETTINGS'):
+               user_hiddenroot()
+           if 'disableguest' in config.options('USERSETTINGS'):
+               user_guest()
+           if 'changepassword' in config.options('USERSETTINGS'):
+               print 'YUP its there' #FIXME
+               for change in config.get('USERSETTINGS',change):
+                   setting = config.get('USERSETTINGS',change).split(',')
+                   user_passwd(setting[0],setting[1])
+
+   if config.options('PASSWORDPOLICY'):
+      if 'policy' in config.options('PASSWORDPOLICY'):
+         account_policy()
+      if 'history' in config.options('PASSWORDPOLICY'):
+         account_policy()
+      if 'complexity' in config.options('PASSWORDPOLICY'):
+         password_complexity()
+
+   if config.options('MALWARE'):
+       for baditems in config.options('MALWARE'):
+           malware = config.get('MALWARE',baditems).split(',')
+           malware_check(malware[0],malware[1])
+
+   if config.options('ADDUSERS'):
+       for users in config.options('ADDUSERS'):
+           user_check('add',users)
+
+   if config.options('REMOVEUSERS'):
+      for remove in config.options('REMOVEUSERS'):
+         user_check('remove',remove)
+
    #apache_security('/etc/apache2/conf-available/myconf.conf')
    #ssh_security()
    #php_security()
