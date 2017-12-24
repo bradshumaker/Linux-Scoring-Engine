@@ -7,24 +7,18 @@ My recommendation for setting up the engine:
 
 1. Have the "bad image" already created, for simplicity sake.
 
-2. Copy the engine.py file to the root directory, remove all read and write permissions.
+2. Read and run the install script.
 
 3. From here, edit the root user's crontab (# crontab -e) and place the line:
 
-                * *  * * * python2 /directory/of/symboliclink
-
-4. Check the folder containing engine.py for Error_log.txt and review the Scoring_Report.html location you configured in the engine.
+* * * * * export DISPLAY=:0 && export XAUTHORITY=/home/cpstudent/.Xauthority && /usr/bin/python2 /ScoringEngine/engine.py
 
 
-My recommendation for setting up terminal based engine:
+4. Configure the engine.conf file located in the \ScoringEngine folder
+
+5. Check the folder containing engine.py for Error_log.txt and review the Scoring_Report.html location you configured in the engine.
 
 
 # Acknowledgements
-
- This scoring engine was created on the behalf of both Holmes and Business Careers
- 
- Cyber Patriot High School teams and created for their use. This code is avaliable 
- 
- for resditribution and modification of any kind, please refer to the MIT License.
- 
- 
+This scoring engine was created is based off Moses Arocha's Linux Scoring Engine. 
+Provided uder the MIT License.
