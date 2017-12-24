@@ -18,7 +18,7 @@ import ConfigParser
 
 pygame.init()
 
-reportLocation = './'
+reportLocation = '/home/cpstudent/Desktop/'
 score = 0
 #points = []
 
@@ -51,7 +51,7 @@ def modScore(points): #changed to modScore, passing -1 will decrease
 def win_prompt(notifytxt):
    global reportLocation
    modScore(1) #will need to increase variables I pass to func later.
-   pygame.mixer.music.load("a.mp3")
+   pygame.mixer.music.load("/ScoringEngine/a.mp3")
    pygame.mixer.music.play()
    n.call(['notify-send', 'Points Awarded!', notifytxt])
    f = open(reportLocation+'Score_Report.html','a')
@@ -75,12 +75,23 @@ def checkComplete(notifytxt): #Prevent Duplicate Prompts
    else:
       f = open(reportLocation+'Score_Report.html', 'w+')
       win_prompt(notifytxt)
-#######################################Engine_Code_Above
-#####MODULES_BELOW
+#######################################Engine_Code_Above###############################################################
+
+
+#######################################MODULES_BELOW###################################################################
+
+#search file for the line ANSWER <strong> and award points.
+#name should be something like: ForensicsQuestion1
+def forensic_question(number,file,string):
+    display = readFile(file)
+    for line in display.split('\n'):
+      if 'ANSWER' in line:
+        if string in line:
+          checkComplete("Forensic Question"+str(number)+" Correct")
 
 def schedule_cron(user, taskstring): #fix
    if os.path.isfile("/var/spool/cron/crontabs/"+user): #does the user have a cronjob?
-      pro = subprocess.Popen("crontab -l -u"+user+" | grep \""+taskstring+"\" | grep -v ^#", shell=True, stdout=subprocess.PIPE)
+      pro = subprocess.Popen("/usr/bin/crontab -l -u"+user+" | grep \""+taskstring+"\" | grep -v ^#", shell=True, stdout=subprocess.PIPE)
       display = pro.stdout.read()
       pro.stdout.close()
       if not display:
@@ -90,7 +101,7 @@ def schedule_cron(user, taskstring): #fix
 
 
 def program_remove(program):
-   pro = subprocess.Popen("dpkg -l | grep " +program, shell=True, stdout=subprocess.PIPE)
+   pro = subprocess.Popen("/usr/bin/dpkg -l | grep " +program, shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.stdout.close()
    pro.wait()
@@ -110,8 +121,7 @@ def program_autoupdates():
 
 ###?
 def program_kernel(kVersion, kMajorRev, kMinRev): #Pass the minimum kernel version to get points
-   #print platform.uname()
-   pro = subprocess.Popen("uname -r", shell=True, stdout=subprocess.PIPE)
+   pro = subprocess.Popen("/bin/uname -r", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.stdout.close()
    display = display.split('.') #[0] = 4, [1]=4 [2]=0-genimg
@@ -123,8 +133,9 @@ def program_kernel(kVersion, kMajorRev, kMinRev): #Pass the minimum kernel versi
 ###
 def user_passwd(user,hash):
    display = readFile('/etc/shadow')
-   if user in display and hash not in display:
-       checkComplete('Changed '+user+' Password')
+   for line in display.split('\n'):
+      if user in line and hash not in line:
+            checkComplete('Changed '+user+'\'s Password')
    #else:
       #remove points, coming soon...
 
@@ -156,15 +167,15 @@ def group_check(change,user,group): #change: add or remove. Example: group_check
    display = readFile('/etc/group')
    for line in display.split('\n'):
        if 'add' in change:
-           if group in line and user in line:
+           if group+':' in line and user in line:#added: to varibale to prevent false pos
                checkComplete('Added '+user+' To The '+group+' Group')
        if 'remove' in change:
-           if group in line and user not in line:
+           if group+':' in line and user not in line: #added : to group to prevent false pos
                checkComplete('Removed '+user+' From the '+group+' Group')
 
 
 def firewall_check(): #changed from crontab -e, was this a different check?
-   pro = subprocess.Popen("ufw status", shell=True, stdout=subprocess.PIPE)
+   pro = subprocess.Popen("/usr/sbin/ufw status", shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read()
    pro.stdout.close()
    pro.wait()
@@ -173,7 +184,7 @@ def firewall_check(): #changed from crontab -e, was this a different check?
 
 #hey this is works on multiple versions of linux ;-)
 def firewall_rule(status,port): #Status is: ACCEPT or DROP
-   pro = subprocess.Popen("iptables -L -n | grep  \":"+port+"$\" | grep "+status.upper(), shell=True, stdout=subprocess.PIPE)
+   pro = subprocess.Popen("/sbin/iptables -L -n | grep  \":"+port+"$\" | grep "+status.upper(), shell=True, stdout=subprocess.PIPE)
    display = pro.stdout.read() #search for port with nothing after it. IE: 22 not 2200 will trigger points
    pro.stdout.close()
    pro.wait()
@@ -187,13 +198,13 @@ def console_reboot(): #Per Debian Security Guide. Go ahead...read it.
          if 'shutdown' in line and line.startswith('#'):
             checkComplete('Prevented Ctrl+Alt+Del Reboot')
    else: #they deleted the file, give points
-      completeCheck('Prevented Ctrl+Alt+Del Reboot')
+      checkComplete('Prevented Ctrl+Alt+Del Reboot')
 
 ###
 def console_userlist():
    if os.path.isfile("/etc/lightdm/lightdm.conf"):
       display = readFile("cat /etc/lightdm/lightdm.conf")
-      if 'greeter-hide-users = true' in display and 'greeter-show-manual-login = true' in display:
+      if 'greeter-hide-users' in display and 'greeter-show-manual-login' in display:
          checkComplete('User List Hidden At Login')
 
 
@@ -201,15 +212,15 @@ def password_complexity(): #break these into different settings or lump them int
    pro = subprocess.Popen("cat /etc/pam.d/common-password", shell=True, stdout=subprocess.PIPE)
    display=pro.stdout.read()
    pro.wait()
-   if "remember=5" in display:
+   if "remember=" in display:
      checkComplete('Added Password History')
-   if "minlen=8" in display:
+   if "minlen=" in display:
      checkComplete('Enforced Password Length')
    if "ucredit" and "lcredit" and "dcredit" and "ocredit" in display:
      checkComplete('Added Password Complexity')
 
 ###
-def password_history():
+def password_history():#FIX
    display = readFile("/etc/login.defs")
    if "PASS_MAX_DAYS " and "PASS_MIN_DAYS " and "PASS_WARN_AGE " in display:
      checkComplete('Added Password History Standards')
@@ -221,17 +232,23 @@ def account_policy():
       checkComplete('Set Account Policy Standards')
 
 
-def malware_check(name, file_path):
-   if not os.path.isfile(file_path):
-      checkComplete('Removed Harmful File: '+name)
+def badfile_check(type, name, file_path):
+   if not os.path.isfile(file_path+name):
+      checkComplete('Removed '+type+' File: '+name)
 
 
 #critical Services listed below
 def apache_security(file):
+   allsettings = 0
    if os.path.isfile(file):
       display = readFile(file)
-      if "ServerSignature" and "ServerTokens" in display:
-          checkComplete('Secured Apache Web Server')
+      for line in display.split('\n'):
+         if "serversignature off" in line.lower() and not line.startswith('#'):
+	    allsettings += 1
+	 if "servertokens prod" in line.lower() and not line.startswith('#'):
+	    allsettings += 1
+      if allsettings == 2:
+	 checkComplete('Secured Apache Web Server')
 
 
 def ssh_security():
@@ -252,20 +269,45 @@ def samba_security():
 
 def php_security():
    if os.path.isfile('/etc/php/7.0/apache2/php.ini'): #make sure php7 is installed
-      pro = subprocess.Popen("cat /etc/php/7.0/apache2/php.ini | grep expose_php", shell=True, stdout=subprocess.PIPE)
-      display = pro.stdout.read()
-      pro.wait()
-      if "Off" in display:
+      display = readFile("/etc/php/7.0/apache2/php.ini")
+      if "expose_php = off" in display:
         checkComplete('secured PHP Version')
 
 
 def waf_check():
-   if os.path.isfile("/etc/modsecurity/modsecurity.conf-recommended"):
-       display = readFile("/etc/modsecurity/modsecurity.conf-recommended")
-       if "SecRequestBodyAccess Off" in display:
-           checkComplete('Added WAF Protection to APache Server')
+   if os.path.isfile("/etc/modsecurity/modsecurity.conf"):
+       display = readFile("/etc/modsecurity/modsecurity.conf")
+       if "SecRuleEngine On" in display:
+           checkComplete('Web Application Firewall Enabled')
+#####WORDPRESS CHECKS
+def crit_wordpress_upate(version):
+    if os.path.isfile("/var/www/html/wp-includes/version.php"):
+        display = readFile("/var/www/html/wp-includes/version.php").split('\n')
+        for line in display:
+            if 'wp_version = ' in line and version in line:
+               checkComplete('Wordpress Upgraded')
 
+def crit_wordpress_plugin(name,version):
+    version = version.split('.')
+    if os.path.isfile("/var/www/html/wp-content/plugins/"+name+"/"+name+".php"):
+        display = readFile("/var/www/html/wp-content/plugins/"+name+"/"+name+".php").split('\n')
+        for line in display:
+            if 'version:' in line.lower():
+               currentver = line.split(':')
+               currentver = currentver[1].split('.')
+               if int(currentver[0]) >= int(version[0]) and int(currentver[1]) >= int(version[1]):
+                   checkComplete('Wordpress Plugin '+name.title()+' Upgraded')
 
+def crit_wordpress_theme(name,version):
+    version = version.split('.')
+    if os.path.isfile("/var/www/html/wp-content/themes/"+name+"/style.css"):
+        display = readFile("/var/www/html/wp-content/themes/"+name+"/style.css").split('\n')
+        for line in display:
+            if 'version:' in line.lower():
+               currentver = line.split(':')
+               currentver = currentver[1].split('.')
+               if int(currentver[0]) >= int(version[0]) and int(currentver[1]) >= int(version[1]):
+                   checkComplete('Wordpress Theme '+name.title()+' Upgraded')
 #End of critical services
 
 
@@ -274,9 +316,16 @@ def main():
    global points
 
    config = ConfigParser.ConfigParser(allow_no_value=True)
-   config.read('engine.conf')
+   config.read('/ScoringEngine/engine.conf')
 
 #find the remove options in engine.conf
+   if config.options('FORENSICS'):
+    forensicnum = 1
+    for answer in config.options('FORENSICS'):
+        questionLocation = reportLocation+'Forensic_Question'+str(forensicnum)+'.txt' #/home/cpstudent/Desktop/Forensic_Question1.txt
+    forensic_question(forensicnum,questionLocation,config.get('FORENSICS',answer))
+    forensicnum +=1
+
    if config.options('PROGRAM'):
        if 'remove' in config.options('PROGRAM'):
           for prog in config.get('PROGRAM','REMOVE').split(','):
@@ -284,15 +333,14 @@ def main():
          #addone to total
        if 'kernel' in config.options('PROGRAM'):
            KernelVer = config.get('PROGRAM','KERNEL').split('.')
-           program_kernel(KernelVer[0],KernelVer[1],KernelVer[2]) 	#Ubuntu16 ships with 4.4.0, btw.
+           program_kernel(KernelVer[0],KernelVer[1],KernelVer[2]) 	#Ubuntu16 ships with 4.4.0, Ubuntu 14: 3.19
            #addone to total
        if 'autoupdates' in config.options('PROGRAM'):
           program_autoupdates()
           #addone to total
        if 'respos' in config.options('PROGRAM'): ##FIXME loophere
-           resposdata = config.get('PROGRAM','RESPOS').split(',')
-           program_respos(resposdata[0],resposdata[1])
-
+          resposdata = config.get('PROGRAM','RESPOS').split(',')
+          program_respos(resposdata[0],resposdata[1])
    if config.options('CRONTASK'):
       for user in config.options('CRONTASK'):
          schedule_cron(user,config.get('CRONTASK',user))
@@ -333,11 +381,11 @@ def main():
                user_hiddenroot()
            if 'disableguest' in config.options('USERSETTINGS'):
                user_guest()
-           if 'changepassword' in config.options('USERSETTINGS'):
-               print 'YUP its there' #FIXME
-               for change in config.get('USERSETTINGS',change):
-                   setting = config.get('USERSETTINGS',change).split(',')
-                   user_passwd(setting[0],setting[1])
+
+   if config.options('PASSWORDCHANGE'):
+      for change in config.options('PASSWORDCHANGE'):
+         setting = config.get('PASSWORDCHANGE',change).split(',')
+         user_passwd(setting[0],setting[1])
 
    if config.options('PASSWORDPOLICY'):
       if 'policy' in config.options('PASSWORDPOLICY'):
@@ -347,10 +395,10 @@ def main():
       if 'complexity' in config.options('PASSWORDPOLICY'):
          password_complexity()
 
-   if config.options('MALWARE'):
-       for baditems in config.options('MALWARE'):
-           malware = config.get('MALWARE',baditems).split(',')
-           malware_check(malware[0],malware[1])
+   if config.options('BADFILE'):
+       for baditems in config.options('BADFILE'):
+           badfile = config.get('BADFILE',baditems).split(',')
+           badfile_check(badfile[0],badfile[1],badfile[2])
 
    if config.options('ADDUSERS'):
        for users in config.options('ADDUSERS'):
@@ -360,11 +408,30 @@ def main():
       for remove in config.options('REMOVEUSERS'):
          user_check('remove',remove)
 
-   #apache_security('/etc/apache2/conf-available/myconf.conf')
-   #ssh_security()
-   #php_security()
-   #waf_check()
-   #samba_security()
+   if config.options('CRITSERVICE'):
+      for service in config.options('CRITSERVICE'):
+          if 'php' in service:
+              php_security()
+          if 'apache' in service:
+		    apache_security('/etc/apache2/conf-enabled/security.conf')
+  	   	    waf_check()
+          if 'ssh' in service:
+              ssh_security()
+          if 'samba' in service:
+              samba_security()
+
+   if config.options('WORDPRESS'):
+      for option in config.options('WORDPRESS'):
+              if 'theme' in option:
+                  themever = config.get("WORDPRESS",option).split(',')
+                  crit_wordpress_theme(themever[0],themever[1])
+              if 'plugin' in option:
+                  plugsetting = config.get("WORDPRESS",option).split(',')
+                  crit_wordpress_plugin(plugsetting[0],plugsetting[1])
+      if 'update' in config.options('WORDPRESS'):
+          crit_wordpress_upate(config.get('WORDPRESS','update'))
+
+
 
    #for point in points: #Write this to the html file and have inline updated
    #    print point
